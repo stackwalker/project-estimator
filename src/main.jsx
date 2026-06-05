@@ -202,7 +202,7 @@ function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Project estimate</p>
-          <h1>{readOnly ? "Saved estimate" : "Draft estimate"}</h1>
+          <h1>{readOnly ? "My Estimate" : "Draft Estimate"}</h1>
           <p className="guid">{estimateId}</p>
         </div>
         <div className="actions">
