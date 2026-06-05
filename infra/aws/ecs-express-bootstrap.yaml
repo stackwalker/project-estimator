@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Bootstrap resources for the project estimator ECS Express deployment.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: project-estimator
+    AllowedPattern: "^[a-zA-Z][a-zA-Z0-9-]{1,62}$"
+    Description: Name prefix for AWS resources.
+  MongoDbUri:
+    Type: String
+    NoEcho: true
+    Description: MongoDB Atlas connection string.
+  MongoDbName:
+    Type: String
+    Default: estimator
+    Description: MongoDB database name.
+  MongoDbCollection:
+    Type: String
+    Default: estimates
+    Description: MongoDB collection name.
+  LogRetentionDays:
+    Type: Number
+    Default: 30
+    Description: CloudWatch Logs retention in days.
+
+Resources:
+  Repository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref AppName
+      EmptyOnDelete: true
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref AppName
+
+  AppLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/ecs/${AppName}"
+      RetentionInDays: !Ref LogRetentionDays
+
+  MongoDbUriSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: MongoDB Atlas connection string for the project estimator app.
+      SecretString: !Ref MongoDbUri
+      Tags:
+        - Key: Application
+          Value: !Ref AppName
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-ecs-task-execution"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: ReadRuntimeSecrets
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Ref MongoDbUriSecret
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-ecs-task"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+
+  InfrastructureRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${AppName}-ecs-express-infra"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowAccessInfrastructureForECSExpressServices
+            Effect: Allow
+            Principal:
+              Service: ecs.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices
+
+Outputs:
+  AppName:
+    Value: !Ref AppName
+  RepositoryUri:
+    Value: !GetAtt Repository.RepositoryUri
+  ClusterName:
+    Value: !Ref Cluster
+  TaskExecutionRoleArn:
+    Value: !GetAtt TaskExecutionRole.Arn
+  TaskRoleArn:
+    Value: !GetAtt TaskRole.Arn
+  InfrastructureRoleArn:
+    Value: !GetAtt InfrastructureRole.Arn
+  MongoDbUriSecretArn:
+    Value: !Ref MongoDbUriSecret
+  MongoDbName:
+    Value: !Ref MongoDbName
+  MongoDbCollection:
+    Value: !Ref MongoDbCollection
+  LogGroupName:
+    Value: !Ref AppLogGroup

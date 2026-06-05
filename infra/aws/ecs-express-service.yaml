@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ECS Express service for the project estimator app.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: project-estimator
+  ServiceName:
+    Type: String
+    Default: project-estimator
+  ClusterName:
+    Type: String
+  ImageUri:
+    Type: String
+  ExecutionRoleArn:
+    Type: String
+  TaskRoleArn:
+    Type: String
+  InfrastructureRoleArn:
+    Type: String
+  MongoDbUriSecretArn:
+    Type: String
+  MongoDbName:
+    Type: String
+    Default: estimator
+  MongoDbCollection:
+    Type: String
+    Default: estimates
+  LogGroupName:
+    Type: String
+  Cpu:
+    Type: String
+    Default: "256"
+  Memory:
+    Type: String
+    Default: "512"
+  MinTaskCount:
+    Type: Number
+    Default: 1
+  MaxTaskCount:
+    Type: Number
+    Default: 2
+
+Resources:
+  Service:
+    Type: AWS::ECS::ExpressGatewayService
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !Ref ClusterName
+      Cpu: !Ref Cpu
+      Memory: !Ref Memory
+      ExecutionRoleArn: !Ref ExecutionRoleArn
+      TaskRoleArn: !Ref TaskRoleArn
+      InfrastructureRoleArn: !Ref InfrastructureRoleArn
+      HealthCheckPath: /health
+      PrimaryContainer:
+        Image: !Ref ImageUri
+        ContainerPort: 3000
+        AwsLogsConfiguration:
+          LogGroup: !Ref LogGroupName
+          LogStreamPrefix: ecs
+        Environment:
+          - Name: NODE_ENV
+            Value: production
+          - Name: PORT
+            Value: "3000"
+          - Name: ESTIMATE_STORE
+            Value: mongodb
+          - Name: MONGODB_DB
+            Value: !Ref MongoDbName
+          - Name: MONGODB_COLLECTION
+            Value: !Ref MongoDbCollection
+        Secrets:
+          - Name: MONGODB_URI
+            ValueFrom: !Ref MongoDbUriSecretArn
+      ScalingTarget:
+        MinTaskCount: !Ref MinTaskCount
+        MaxTaskCount: !Ref MaxTaskCount
+        AutoScalingMetric: AVERAGE_CPU
+        AutoScalingTargetValue: 60
+      Tags:
+        - Key: Application
+          Value: !Ref AppName
+
+Outputs:
+  Endpoint:
+    Value: !GetAtt Service.Endpoint
+  ServiceArn:
+    Value: !GetAtt Service.ServiceArn

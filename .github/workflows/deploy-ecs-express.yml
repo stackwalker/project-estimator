@@ -1,0 +1,50 @@
+name: Deploy ECS Express
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-ecs-express-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      APP_NAME: ${{ vars.APP_NAME || 'project-estimator' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      MONGODB_DB: ${{ vars.MONGODB_DB || 'estimator' }}
+      MONGODB_COLLECTION: ${{ vars.MONGODB_COLLECTION || 'estimates' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Validate app build
+        run: npm ci && npm run build
+
+      - name: Validate CloudFormation templates
+        run: |
+          aws cloudformation validate-template \
+            --template-body file://infra/aws/ecs-express-bootstrap.yaml
+          aws cloudformation validate-template \
+            --template-body file://infra/aws/ecs-express-service.yaml
+
+      - name: Deploy to ECS Express
+        run: ./scripts/aws-ecs-express-deploy.sh
