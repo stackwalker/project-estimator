@@ -68,10 +68,14 @@ Resources:
                   - cloudformation:ExecuteChangeSet
                   - cloudformation:GetTemplateSummary
                   - cloudformation:UpdateStack
-                  - cloudformation:ValidateTemplate
                 Resource:
                   - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-ecs-express-bootstrap/*"
                   - !Sub "arn:aws:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/${AppName}-ecs-express-service/*"
+              - Sid: CloudFormationTemplateValidation
+                Effect: Allow
+                Action:
+                  - cloudformation:ValidateTemplate
+                Resource: "*"
               - Sid: EcrPush
                 Effect: Allow
                 Action:
