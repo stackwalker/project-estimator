@@ -48,7 +48,9 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubRepository}:ref:refs/heads/main"
+                token.actions.githubusercontent.com:sub:
+                  - !Sub "repo:${GitHubRepository}:ref:refs/heads/main"
+                  - !Sub "repo:${GitHubRepository}:environment:production"
       Policies:
         - PolicyName: DeployEcsExpress
           PolicyDocument:
