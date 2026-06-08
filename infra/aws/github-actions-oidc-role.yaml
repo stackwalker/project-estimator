@@ -103,6 +103,7 @@ Resources:
                   - ecs:DescribeServices
                   - ecs:DescribeExpressGatewayService
                   - ecs:DescribeServiceDeployments
+                  - ecs:DescribeServiceRevisions
                   - ecs:ListServiceDeployments
                   - ecs:RegisterTaskDefinition
                   - ecs:TagResource
