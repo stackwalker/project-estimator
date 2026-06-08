@@ -101,6 +101,7 @@ Resources:
                   - ecs:DeleteService
                   - ecs:DescribeClusters
                   - ecs:DescribeServices
+                  - ecs:RegisterTaskDefinition
                   - ecs:TagResource
                   - ecs:UpdateExpressGatewayService
                   - ecs:UpdateService
