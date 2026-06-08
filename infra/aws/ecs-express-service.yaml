@@ -66,10 +66,22 @@ Resources:
             Value: "3000"
           - Name: ESTIMATE_STORE
             Value: mongodb
+          - Name: TRUST_PROXY
+            Value: "true"
+          - Name: ESTIMATE_BURST_LIMIT
+            Value: "20"
+          - Name: ESTIMATE_BURST_WINDOW_SECONDS
+            Value: "60"
+          - Name: ESTIMATE_DAILY_CREATE_LIMIT
+            Value: "25"
+          - Name: ESTIMATE_QUOTA_WINDOW_HOURS
+            Value: "24"
           - Name: MONGODB_DB
             Value: !Ref MongoDbName
           - Name: MONGODB_COLLECTION
             Value: !Ref MongoDbCollection
+          - Name: MONGODB_QUOTA_COLLECTION
+            Value: estimate_quotas
         Secrets:
           - Name: MONGODB_URI
             ValueFrom: !Ref MongoDbUriSecretArn
