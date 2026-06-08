@@ -5,14 +5,18 @@ import {
   Clock3,
   CopyPlus,
   Edit3,
+  Moon,
   Plus,
   Save,
+  Sun,
   Trash2,
   X
 } from "lucide-react";
 import "./styles.css";
 
 const MAX_ITEMS = 50;
+const THEME_STORAGE_KEY = "estimator-theme";
+const DEFAULT_ESTIMATE_TITLE = "My Estimate";
 const EMPTY_ITEM = {
   description: "",
   estimate: "",
@@ -69,13 +73,21 @@ function createItem(overrides = {}) {
   };
 }
 
+function getInitialTheme() {
+  const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
+  if (savedTheme === "light" || savedTheme === "dark") return savedTheme;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 function App() {
   const [estimateId, setEstimateId] = useState("");
+  const [title, setTitle] = useState(DEFAULT_ESTIMATE_TITLE);
   const [items, setItems] = useState([]);
   const [readOnly, setReadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [theme, setTheme] = useState(getInitialTheme);
 
   useEffect(() => {
     let id = getRouteId();
@@ -93,6 +105,7 @@ function App() {
       })
       .then((estimate) => {
         if (estimate) {
+          setTitle(estimate.title || DEFAULT_ESTIMATE_TITLE);
           setItems(estimate.items.map((item) => ({ ...item, committed: true })));
           setReadOnly(true);
         }
@@ -100,6 +113,11 @@ function App() {
       .catch((error) => setMessage(error.message))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
 
   const totals = useMemo(() => {
     const ranges = items.map(rangeFor);
@@ -144,10 +162,15 @@ function App() {
 
   async function saveEstimate() {
     setMessage("");
+    const trimmedTitle = title.trim();
     const invalid = items.find(
       (item) => !item.description.trim() || Number(item.estimate) < 0 || item.estimate === ""
     );
 
+    if (!trimmedTitle) {
+      setMessage("Add an estimate title before saving.");
+      return;
+    }
     if (items.length === 0) {
       setMessage("Add at least one line item before saving.");
       return;
@@ -164,12 +187,14 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: estimateId,
+          title: trimmedTitle,
           items: items.map(({ committed, ...item }) => item)
         })
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Unable to save estimate.");
 
+      setTitle(payload.title);
       setItems(payload.items.map((item) => ({ ...item, committed: true })));
       setReadOnly(true);
       setMessage("Estimate saved as immutable JSON.");
@@ -184,9 +209,14 @@ function App() {
     const nextId = guid();
     setEstimateId(nextId);
     setRouteId(nextId);
+    setTitle(title.trim() || DEFAULT_ESTIMATE_TITLE);
     setItems(items.map((item) => ({ ...item, id: guid(), committed: true })));
     setReadOnly(false);
     setMessage("Forked into a new editable estimate.");
+  }
+
+  function toggleTheme() {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
   }
 
   if (loading) {
@@ -202,10 +232,31 @@ function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Project estimate</p>
-          <h1>{readOnly ? "My Estimate" : "Draft Estimate"}</h1>
+          <input
+            className="title-input"
+            aria-label="Estimate title"
+            value={title}
+            disabled={readOnly}
+            maxLength={80}
+            onChange={(event) => setTitle(event.target.value)}
+          />
           <p className="guid">{estimateId}</p>
         </div>
         <div className="actions">
+          <button
+            className="theme-toggle"
+            type="button"
+            aria-pressed={theme === "dark"}
+            onClick={toggleTheme}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          >
+            {theme === "dark" ? (
+              <Moon size={18} aria-hidden="true" />
+            ) : (
+              <Sun size={18} aria-hidden="true" />
+            )}
+            <span>{theme === "dark" ? "Dark" : "Light"}</span>
+          </button>
           {readOnly ? (
             <button className="primary" onClick={forkEstimate}>
               <Edit3 size={18} aria-hidden="true" />
